@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hyper-Connections at Small Scale - Image Prediction</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d5fe8'/%3E%3Ccircle cx='9' cy='11' r='3' fill='%23fff'/%3E%3Ccircle cx='9' cy='22' r='3' fill='%23fff'/%3E%3Ccircle cx='23' cy='16' r='4' fill='%2327d3f5'/%3E%3C/svg%3E">
+<style>
+:root{
+  --navy:#0a1b45; --blue:#1d5fe8; --blue-d:#164ac2; --cyan:#27d3f5; --bg:#eef2f9; --card:#fff; --line:#dfe6f3;
+  --ink:#14224a; --muted:#5b6b8c; --green:#14833b; --green-bg:#e9f8ef; --r:12px;
+  --font:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+h1,h2,h3,h4,p{margin:0}
+.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.i.xl{width:40px;height:40px;stroke-width:1.7}
+.muted{color:var(--muted)} .small{font-size:12px}
+
+/* shell */
+.app{display:grid;grid-template-columns:208px 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#0a1a42,#081436);color:#c8d4f2;padding:18px 0 16px}
+.brand{padding:4px 22px 28px}
+.nav a{display:flex;align-items:center;gap:12px;padding:12px 22px;color:#c8d4f2;text-decoration:none;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.06)}
+.nav a.on{background:var(--blue);color:#fff;box-shadow:inset 3px 0 0 #7fb6ff}
+.side .info{margin:auto 14px 0;padding:12px 14px;border:1px solid #243a74;border-radius:10px;font-size:12px;color:#9fb0dc}
+.side .info b{display:block;color:#fff;font-size:15px;margin-bottom:4px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:14px 26px;color:#fff;background:linear-gradient(100deg,#0b1f55,#133a9e 58%,#0e2c80)}
+.top h1{font-size:30px;font-weight:800;letter-spacing:-.3px} .top h1 b{color:var(--cyan)}
+.top p{font-size:15px;color:#d8e3ff;margin-top:2px}
+.badges{display:flex;gap:10px;flex:none}
+.badge{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid rgba(255,255,255,.22);border-radius:10px;background:rgba(255,255,255,.08);line-height:1.15}
+.badge small{display:block;color:#b9c9f3;font-size:12px}
+.page{display:grid;gap:14px;padding:14px 16px 26px}
+.page[hidden]{display:none}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 1px 2px rgba(12,32,80,.06);min-width:0}
+.card>h3{display:flex;align-items:center;gap:8px;padding:12px 14px;font-size:15px;font-weight:700;border-bottom:1px solid var(--line)}
+.card>h3 .i{color:var(--blue)} .card>h3 .push{flex:1}
+.body{padding:12px 14px 14px} .body.tight{padding:0}
+.row4{display:grid;grid-template-columns:1.2fr 1fr 1.2fr 1.3fr;gap:14px;align-items:start}
+.row3{display:grid;grid-template-columns:1fr 1.5fr;gap:14px;align-items:start}      /* history on its own row: it has the most columns */
+.row3>:first-child{grid-column:1/-1}
+@media (min-width:1760px){.row3{grid-template-columns:2.3fr .9fr 1.3fr}.row3>:first-child{grid-column:auto}}
+.intro{display:flex;align-items:center;gap:16px;padding:14px 18px}
+.intro h2{font-size:28px;font-weight:800;letter-spacing:-.3px}
+.intro .big{display:grid;place-items:center;width:62px;height:62px;border-radius:16px;background:linear-gradient(135deg,#5b4bdb,#7d5cff);color:#fff;flex:none}
+.intro .big .i{width:30px;height:30px}
+.intro>div:nth-child(2){flex:1;min-width:0}
+.intro p{color:var(--muted);font-size:15px;margin-top:2px}
+.how{flex:none;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#f6f9ff}
+.how b{display:block;margin-bottom:6px}
+.how ol{display:flex;align-items:center;gap:8px;margin:0;padding:0;list-style:none;font-size:13px}
+.how li{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.how li i{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--blue);color:var(--blue);font:700 11px/1 var(--font);font-style:normal}
+.how li+li::before{content:"\2192";color:var(--muted);margin-right:2px}
+
+/* form controls */
+.field{margin-top:10px}
+.field label,.lbl{display:block;font-weight:600;margin-bottom:4px}
+.sel{display:flex;gap:8px}
+.sel .ico{display:grid;place-items:center;width:38px;height:38px;border-radius:8px;background:#e7efff;color:var(--blue);flex:none}
+select{flex:1;min-width:0;width:100%;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit}
+select:disabled{background:#f3f5fa;color:#8d99b5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 14px;border:0;border-radius:8px;background:var(--blue);color:#fff;font:600 14px/1 var(--font);cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--blue-d)} .btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.green{background:var(--green)} .btn.green:hover{background:#0f6b30}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)} .btn.ghost:hover{background:#f3f6fc}
+.btn.sm{height:30px;padding:0 10px;font-size:12px}
+.btn.wide{width:100%;height:42px;margin-top:14px;font-size:15px}
+.note{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:9px 11px;border-radius:9px;font-size:12.5px}
+.note .i{margin-top:1px}
+.note.info{background:#eef5ff;border:1px solid #cfe0ff;color:#27458f}
+.note.warn{background:#fff7e6;border:1px solid #ffdca3;color:#7a4a00}
+.note.err{background:#fdecec;border:1px solid #f6b9b9;color:#8a1f1f}
+.ok{display:flex;gap:10px;margin-top:12px;padding:11px 12px;border-radius:10px;background:var(--green-bg);border:1px solid #bfe6cd}
+.ok .i{color:var(--green);width:24px;height:24px;margin-top:1px} .ok b{color:#116b32} .ok div div{font-size:12.5px}
+.ok.bad{background:#fdecec;border-color:#f6b9b9} .ok.bad .i,.ok.bad b{color:#8a1f1f}
+.empty{padding:26px 10px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px;background:#fafbfe}
+
+/* upload */
+.sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.drop{display:grid;justify-items:center;gap:4px;padding:18px 10px;text-align:center;border:2px dashed #a9c0f5;border-radius:12px;background:#f8fbff;cursor:pointer}
+.drop .i{color:var(--blue)} .drop.over{background:#e8f1ff;border-color:var(--blue)} .drop:focus-within{outline:2px solid var(--blue);outline-offset:2px}
+.lbl{margin-top:12px}
+.prev{position:relative;aspect-ratio:1;border-radius:10px;border:1px solid var(--line);background:#f1f4fb;overflow:hidden;display:grid;place-items:center;color:var(--muted)}
+.prev img{width:100%;height:100%;object-fit:cover;display:block}
+.fileinfo{margin-top:6px;font-size:12.5px;display:flex;gap:14px;flex-wrap:wrap}
+
+/* results */
+.top1{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--green-bg);border:1px solid #bfe6cd}
+.trophy{display:grid;place-items:center;width:52px;height:52px;border-radius:12px;background:#fff3c4;color:#e0a000;flex:none}
+.top1 .trophy .i{width:30px;height:30px}
+.top1>div:nth-child(2){flex:1;min-width:0} .top1 small{color:#116b32;font-weight:600}
+.top1 .bigname{font-size:26px;font-weight:800;line-height:1.1;overflow-wrap:anywhere}
+.seen{margin:0;text-align:center;font-size:10.5px;color:var(--muted);flex:none}
+.seen img{display:block;width:56px;height:56px;image-rendering:pixelated;border-radius:6px;border:1px solid #bfe6cd}
+h4{margin:12px 0 6px;font-size:14px}
+.top5{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.top5 li{display:grid;grid-template-columns:26px 44px 1fr;gap:9px;align-items:center;padding:7px 9px;border-radius:10px;background:var(--t)}
+.rank{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--c);color:var(--c);font-weight:700;font-size:13px}
+.cls{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#fff}
+.line{display:flex;justify-content:space-between;gap:8px;font-weight:600} .line span{color:var(--c)}
+.bar{height:7px;margin-top:5px;border-radius:5px;background:rgba(20,34,74,.09);overflow:hidden} .bar i{display:block;height:100%;border-radius:5px;background:var(--c)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px} .btns .btn{padding:0 8px;font-size:13px}
+.busy{opacity:.5;pointer-events:none;transition:opacity .15s}
+
+/* tabs, charts */
+.tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;padding:10px 14px 0}
+.tabs button{height:32px;border:1px solid var(--line);border-radius:7px;background:#f3f6fc;color:var(--ink);font:600 13px/1 var(--font);cursor:pointer}
+.tabs button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.center{text-align:center;margin:4px 0 8px}
+.crow{display:grid;grid-template-columns:76px 1fr;gap:8px;align-items:center;height:36px}
+.clab{text-align:right;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctrack{position:relative;height:100%;border-left:1px solid #9aa8c6;background:repeating-linear-gradient(90deg,transparent 0 calc(20% - 1px),#e6ebf6 calc(20% - 1px) 20%)}
+.ctrack i{position:absolute;left:0;top:7px;bottom:7px;border-radius:0 5px 5px 0}
+.ctrack b{position:absolute;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;white-space:nowrap}
+.ctrack b.in{color:#fff;transform:translate(-100%,-50%)}
+.axis{display:grid;grid-template-columns:76px 1fr;gap:8px}
+.ticks{position:relative;height:18px;border-top:1px solid #9aa8c6;font-size:11px;color:var(--muted)}
+.ticks i{position:absolute;top:2px;transform:translateX(-50%);font-style:normal}
+.axtitle{text-align:center;font-size:12px;color:var(--muted);margin-top:2px}
+.allc{max-height:330px;overflow:auto;display:grid;gap:3px}
+.arow{display:grid;grid-template-columns:28px 1fr 70px 56px;gap:8px;align-items:center;padding:3px 6px;border-radius:6px;font-size:12.5px}
+.arow.hi{background:#eef4ff;font-weight:600} .arow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .arow .pv{text-align:right}
+.mini{height:6px;border-radius:4px;background:#e6ebf6;overflow:hidden} .mini i{display:block;height:100%;background:var(--blue)}
+svg.plot{width:100%;height:auto;max-height:250px;display:block}
+.gl{stroke:#e3e9f5;stroke-width:1} .tx{fill:#5b6b8c;font-size:10.5px} .ax{stroke:#9aa8c6}
+.legend{display:flex;justify-content:center;gap:18px;font-size:12px;margin-top:4px}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+/* history, class info */
+.scroll{max-height:290px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{position:sticky;top:0;background:#f2f5fc;text-align:left;padding:8px 9px;font-weight:700;white-space:nowrap}
+td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:middle}
+.imgcell{display:flex;align-items:center;gap:7px;max-width:130px} .imgcell span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumb{width:28px;height:28px;border-radius:6px;object-fit:cover;flex:none}
+.ck{font-size:11.5px;word-break:break-all;min-width:170px} .nw{white-space:nowrap}
+td.none{padding:22px;text-align:center;color:var(--muted)}
+.cinfo{display:flex;gap:12px;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#f8fbff}
+.cinfo img{width:64px;height:64px;border-radius:8px;flex:none}
+.cinfo div div{font-size:13px}
+.figs{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px}
+.figs figure{margin:0;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}
+.figs img{width:100%;height:auto;display:block} .figs figcaption{margin-top:6px;font-weight:600;font-size:13px}
+
+@media (max-width:1280px){.row4{grid-template-columns:1fr 1fr}.how{display:none}}
+@media (max-width:820px){.app{grid-template-columns:1fr}.side{display:none}.row4,.row3{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}.top h1{font-size:22px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-1.04 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98 1.04 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></symbol>
+<symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+<symbol id="i-line" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></symbol>
+<symbol id="i-bars" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+</defs></svg>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" width="54" height="54" aria-label="Two streams merging" role="img"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+        <g fill="none" stroke="url(#lg)" stroke-width="3" stroke-linecap="round"><circle cx="15" cy="18" r="6"/><circle cx="15" cy="46" r="6"/><circle cx="49" cy="32" r="8"/><path d="M21 18h9c7 0 9 14 11 14M21 46h9c7 0 9-14 11-14"/><path d="M21 18c11 0 11 28 0 28"/></g></svg>
+    </div>
+    <nav class="nav">
+      <a href="#predict" data-view="predict" class="on"><svg class="i"><use href="#i-camera"/></svg>Image Prediction</a>
+      <a href="#results" data-view="results"><svg class="i"><use href="#i-bars"/></svg>Results &amp; Analysis</a>
+      <a href="/files/report" id="nav-report" hidden><svg class="i"><use href="#i-doc"/></svg>Project Report</a>
+    </nav>
+    <div class="info"><b>Project Info</b>Hyper-Connections<br>at Small Scale<br>B.Tech final-year project 2026</div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div>
+        <h1>Hyper-Connections at <b>Small Scale</b></h1>
+        <p>Depth Scaling and Data Efficiency of Multi-Stream Residual Connections in Compact CNNs and Vision Transformers</p>
+      </div>
+      <div class="badges">
+        <span class="badge"><svg class="i"><use href="#i-db"/></svg><span><b>CIFAR-100</b><small>100 classes</small></span></span>
+        <span class="badge"><b>PyTorch</b></span>
+      </div>
+    </header>
+
+    <main id="view-predict" class="page">
+      <section class="card intro">
+        <div class="big"><svg class="i"><use href="#i-camera"/></svg></div>
+        <div><h2>Image Prediction</h2><p>Upload an image and get the top-5 predicted classes from a trained model, with or without Hyper-Connections.</p></div>
+        <div class="how"><b>How it works?</b>
+          <ol><li><i>1</i>Upload Image</li><li><i>2</i>Preprocess</li><li><i>3</i>Load Model</li><li><i>4</i>Predict Top-5</li></ol></div>
+      </section>
+
+      <div class="row4">
+        <section class="card">
+          <h3><svg class="i"><use href="#i-sliders"/></svg>1. Model &amp; Checkpoint Settings</h3>
+          <div class="body">
+            <div id="norun" class="note warn" hidden></div>
+            <div class="field"><label for="s-data">Dataset</label><div class="sel"><span class="ico"><svg class="i"><use href="#i-db"/></svg></span><select id="s-data"></select></div></div>
+            <div class="field"><label for="s-arch">Model Architecture</label><div class="sel"><span class="ico"><svg class="i"><use href="#i-box"/></svg></span><select id="s-arch"></select></div></div>
+            <div class="field"><label for="s-depth">Model Depth</label><div class="sel"><span class="ico"><svg class="i"><use href="#i-layers"/></svg></span><select id="s-depth"></select></div></div>
+            <div class="field"><label for="s-conn">Connection Type</label><div class="sel"><span class="ico"><svg class="i"><use href="#i-link"/></svg></span><select id="s-conn"></select></div></div>
+            <div class="field"><label for="s-ckpt">Checkpoint</label><div class="sel"><span class="ico"><svg class="i"><use href="#i-file"/></svg></span><select id="s-ckpt"></select></div></div>
+            <button class="btn wide" id="load" disabled><svg class="i"><use href="#i-search"/></svg><span>Load Model</span></button>
+            <div id="loaded" class="ok" hidden></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3><svg class="i"><use href="#i-upload"/></svg>2. Upload Image</h3>
+          <div class="body">
+            <label class="drop" id="drop" for="file">
+              <svg class="i xl"><use href="#i-cloud"/></svg>
+              <span>Drag and drop an image here</span><span class="muted small">or</span>
+              <span class="btn">Browse Files</span>
+              <span class="muted small">Supported formats: JPG, JPEG, PNG</span>
+            </label>
+            <input class="sr" id="file" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png">
+            <div class="lbl">Uploaded Image</div>
+            <div class="prev" id="prev"><span>No image yet</span></div>
+            <div class="fileinfo" id="finfo"></div>
+            <div class="note info"><svg class="i"><use href="#i-info"/></svg><span>The image is centre-cropped to a square, resized to 32 &times; 32 and normalized with the CIFAR-100 statistics before the model sees it.</span></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3><svg class="i"><use href="#i-target"/></svg>3. Prediction Results</h3>
+          <div class="body" id="res" aria-live="polite"><div class="empty">Load a model and upload an image to see the top-5 predictions.</div></div>
+        </section>
+
+        <section class="card">
+          <h3><svg class="i"><use href="#i-image"/></svg>4. Prediction Visualization</h3>
+          <div class="tabs" id="tabs4"><button class="on" data-t="chart">Top-5 Chart</button><button data-t="all">All Classes</button></div>
+          <div class="body" id="viz"><div class="empty">The chart appears after the first prediction.</div></div>
+        </section>
+      </div>
+
+      <div class="row3">
+        <section class="card">
+          <h3><svg class="i"><use href="#i-clock"/></svg>5. Prediction History<span class="push"></span>
+            <button class="btn sm green" id="dl-hist">Download history (CSV)</button><button class="btn sm ghost" id="clear-hist">Clear</button></h3>
+          <div class="body tight"><div class="scroll"><table id="hist">
+            <thead><tr><th>#</th><th>Image</th><th>Dataset</th><th>Model</th><th>Connection</th><th>Checkpoint</th><th>Top Prediction</th><th>Confidence</th><th>Time</th></tr></thead>
+            <tbody></tbody></table></div></div>
+        </section>
+
+        <section class="card">
+          <h3><svg class="i"><use href="#i-db"/></svg>6. Class Information</h3>
+          <div class="body">
+            <label class="lbl" for="s-class" style="margin-top:0">Search class</label>
+            <select id="s-class"></select>
+            <div class="cinfo" id="cinfo"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3><svg class="i"><use href="#i-line"/></svg>7. Model Performance</h3>
+          <div class="tabs" id="tabs7"><button class="on" data-t="acc">Accuracy</button><button data-t="loss">Loss</button></div>
+          <div class="body"><div id="perf"><div class="empty">Load a model to see how it was trained.</div></div><p class="muted small" id="perfnote" style="margin-top:6px"></p></div>
+        </section>
+      </div>
+    </main>
+
+    <main id="view-results" class="page" hidden>
+      <section class="card">
+        <h3><svg class="i"><use href="#i-bars"/></svg>Results &amp; Analysis</h3>
+        <div class="body"><p class="muted" style="margin-bottom:12px">The figures of the study, drawn from the logs of the 24 training runs (results/figures). One run per setting, so these are observations, not proven effects.</p>
+          <div class="figs" id="figs"></div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const pct = p => (p * 100).toFixed(2);
+const nice = s => s.replace(/_/g, " ");
+const COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#f59e0b", "#8b5cf6"], TINTS = ["#fdeeee", "#eaf2ff", "#eaf8ef", "#fff4e5", "#f3ecff"];
+const DATASET = {cifar100: "CIFAR-100"}, FAMILY = {resnet: "ResNet", vit: "ViT-Tiny"};
+const archName = r => `${FAMILY[r.family] || r.family}-${r.depth}`;
+const connKey = r => `${r.kind}:${r.n}`;
+const connName = r => r.kind === "residual" ? "Standard (1 stream)" : `${r.kind === "mhc" ? "mHC" : "Hyper-Connection"} (${r.n} streams)`;
+const connShort = r => r.kind === "residual" ? "Standard" : `${r.kind === "mhc" ? "mHC" : "HC"}-${r.n}`;
+const two = n => String(n).padStart(2, "0");
+const stamp = d => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
+
+const KEY = "nn09_history_v1";                         // the history lives in this browser only
+const S = {runs: [], classes: [], rec: null, img: null, result: null, tab: "chart", ptab: "acc", curve: null,
+           hist: (() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } })()};
+const saveHist = () => { try { localStorage.setItem(KEY, JSON.stringify(S.hist)); } catch { /* private window or full: memory only */ } };
+
+async function api(url, opt) {
+  const r = await fetch(url, opt), j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `the server answered ${r.status}`);
+  return j;
+}
+const options = (el, items) => { el.innerHTML = items.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join(""); el.title = el.selectedOptions[0]?.text || ""; };
+const uniq = a => [...new Set(a)];
+
+/* 1 - model settings: each list narrows the next one */
+const sel = {data: $("#s-data"), arch: $("#s-arch"), depth: $("#s-depth"), conn: $("#s-conn"), ckpt: $("#s-ckpt")};
+function refill(from) {                                // from: 0 dataset ... 4 checkpoint = first list to rebuild
+  let rs = S.runs;
+  if (from <= 0) options(sel.data, uniq(rs.map(r => r.dataset)).map(d => [d, DATASET[d] || d]));
+  rs = rs.filter(r => r.dataset === sel.data.value);
+  if (from <= 1) options(sel.arch, uniq(rs.map(r => r.family)).map(f => [f, FAMILY[f] || f]));
+  rs = rs.filter(r => r.family === sel.arch.value);
+  if (from <= 2) options(sel.depth, uniq(rs.map(r => r.depth)).map(d => [d, `${FAMILY[sel.arch.value] || sel.arch.value}-${d}`]));
+  rs = rs.filter(r => String(r.depth) === sel.depth.value);
+  if (from <= 3) options(sel.conn, uniq(rs.map(connKey)).map(k => [k, connName(rs.find(r => connKey(r) === k))]));
+  rs = rs.filter(r => connKey(r) === sel.conn.value);
+  options(sel.ckpt, rs.map(r => [r.id, `${r.id}  (${pct(r.acc)}%)`]));
+  $("#load").disabled = !sel.ckpt.value;
+}
+["data", "arch", "depth", "conn"].forEach((k, i) => sel[k].addEventListener("change", () => refill(i + 1)));
+sel.ckpt.addEventListener("change", () => { sel.ckpt.title = sel.ckpt.selectedOptions[0].text; });
+
+$("#load").addEventListener("click", async () => {
+  const id = sel.ckpt.value, label = $("#load span"), btn = $("#load");
+  btn.disabled = true; label.textContent = "Loading...";
+  try {
+    await api(`/api/load?run=${encodeURIComponent(id)}`, {method: "POST"});
+    S.rec = S.runs.find(r => r.id === id);
+    const r = S.rec;
+    $("#loaded").className = "ok"; $("#loaded").hidden = false;
+    $("#loaded").innerHTML = `<svg class="i"><use href="#i-check"/></svg><div><b>Model loaded successfully!</b>
+      <div>Dataset: ${esc(DATASET[r.dataset] || r.dataset)} &nbsp; Classes: ${S.classes.length}</div>
+      <div>Architecture: ${esc(archName(r))} (${esc(connShort(r))})</div>
+      <div>${r.params.toLocaleString()} parameters &middot; test accuracy ${pct(r.acc)}% after ${r.epochs} epochs</div></div>`;
+    drawCurve();
+    if (S.img) predict();                              // the same picture through the model that was just loaded
+  } catch (e) {
+    $("#loaded").className = "ok bad"; $("#loaded").hidden = false;
+    $("#loaded").innerHTML = `<svg class="i"><use href="#i-info"/></svg><div><b>Could not load the model</b><div>${esc(e.message)}</div></div>`;
+  } finally { btn.disabled = false; label.textContent = "Load Model"; }
+});
+
+/* 2 - upload */
+const drop = $("#drop");
+$("#file").addEventListener("change", e => e.target.files[0] && take(e.target.files[0]));
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => e.dataTransfer.files[0] && take(e.dataTransfer.files[0]));
+["dragover", "drop"].forEach(t => window.addEventListener(t, e => e.preventDefault()));   // a miss must not open the file in the tab
+
+function thumbOf(im) {
+  const c = document.createElement("canvas"), s = Math.min(im.naturalWidth, im.naturalHeight);
+  c.width = c.height = 56;
+  c.getContext("2d").drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, 56, 56);
+  return c.toDataURL("image/jpeg", 0.7);
+}
+function take(file) {
+  if (!/^image\/(jpeg|png)$/.test(file.type) && !/\.(jpe?g|png)$/i.test(file.name)) return say("Please choose a JPG or PNG image.", "err");
+  if (file.size > 10 * 2 ** 20) return say("That image is larger than 10 MB; please choose a smaller one.", "err");
+  const url = URL.createObjectURL(file), im = new Image();
+  im.onload = () => {
+    if (S.img) URL.revokeObjectURL(S.img.url);
+    S.img = {file, name: file.name, w: im.naturalWidth, h: im.naturalHeight, url, thumb: thumbOf(im)};
+    $("#prev").innerHTML = `<img src="${url}" alt="Uploaded image">`;
+    $("#finfo").innerHTML = `<span>File: <b>${esc(file.name)}</b></span><span>Size: ${im.naturalWidth} &times; ${im.naturalHeight}</span>`;
+    if (S.rec) predict(); else say("Now load a model in panel 1 to run the prediction.", "info");
+  };
+  im.onerror = () => say("The browser could not read that image.", "err");
+  im.src = url;
+}
+function say(text, kind) { $("#res").innerHTML = `<div class="note ${kind}" style="margin-top:0"><svg class="i"><use href="#i-info"/></svg><span>${esc(text)}</span></div>`; }
+
+/* 3 and 4 - prediction, results, charts */
+async function predict() {
+  const rec = S.rec, img = S.img;
+  $("#res").classList.add("busy");
+  try {
+    const j = await api(`/api/predict?run=${encodeURIComponent(rec.id)}`, {method: "POST", body: img.file});
+    S.result = {...j, rec, img};
+    pushHistory(S.result);
+    renderResults(); renderViz();
+  } catch (e) { say(e.message, "err"); }
+  finally { $("#res").classList.remove("busy"); }
+}
+function renderResults() {
+  const R = S.result, t = R.top5[0];
+  $("#res").innerHTML = `
+    <div class="top1"><div class="trophy"><svg class="i"><use href="#i-trophy"/></svg></div>
+      <div><small>Top Prediction</small><div class="bigname">${esc(nice(t.name))}</div><div>${pct(t.prob)}% confidence</div></div>
+      <figure class="seen"><img src="${R.seen}" alt="The picture the network saw"><figcaption>model input</figcaption></figure></div>
+    <h4>Top-5 Predicted Classes</h4>
+    <ol class="top5">${R.top5.map((c, i) => `<li style="--c:${COLORS[i]};--t:${TINTS[i]}"><span class="rank">${i + 1}</span>
+      <img class="cls" src="/api/sample/${c.index}.png" alt=""><div><div class="line"><span style="color:var(--ink)">${esc(nice(c.name))}</span><span>${pct(c.prob)}%</span></div>
+      <div class="bar"><i style="width:${Math.max(c.prob * 100, 0.8)}%"></i></div></div></li>`).join("")}</ol>
+    <div class="btns"><button class="btn" id="b-prob"><svg class="i"><use href="#i-bars"/></svg>Show Probabilities</button>
+      <button class="btn green" id="b-csv"><svg class="i"><use href="#i-download"/></svg>Download Results (CSV)</button></div>
+    <p class="muted small" style="margin-top:8px">${esc(archName(R.rec))} &middot; ${esc(connShort(R.rec))} &middot; ${R.ms} ms</p>`;
+  $("#b-prob").onclick = () => { setTab("chart"); $("#viz").scrollIntoView({behavior: "smooth", block: "nearest"}); };
+  $("#b-csv").onclick = () => saveCsv(`nn09_top5_${stamp(new Date()).replace(/\D/g, "")}.csv`,
+    [["image", "dataset", "model", "connection", "checkpoint", "rank", "class", "probability_percent"],
+     ...R.top5.map((c, i) => [R.img.name, DATASET[R.rec.dataset] || R.rec.dataset, archName(R.rec), connShort(R.rec), `${R.rec.id}/model.pt`, i + 1, nice(c.name), pct(c.prob)])]);
+}
+function setTab(t) { S.tab = t; document.querySelectorAll("#tabs4 button").forEach(b => b.classList.toggle("on", b.dataset.t === t)); renderViz(); }
+$("#tabs4").addEventListener("click", e => e.target.dataset.t && setTab(e.target.dataset.t));
+function renderViz() {
+  const R = S.result; if (!R) return;
+  if (S.tab === "chart") {
+    $("#viz").innerHTML = `<h4 class="center">Top-5 Class Probabilities</h4>
+      ${R.top5.map((c, i) => { const p = c.prob * 100, inside = p > 80;
+        return `<div class="crow"><span class="clab" title="${esc(nice(c.name))}">${esc(nice(c.name))}</span><div class="ctrack"><i style="width:${p}%;background:${COLORS[i]}"></i>
+          <b class="${inside ? "in" : ""}" style="left:calc(${p}% ${inside ? "-" : "+"} 6px)">${pct(c.prob)}%</b></div></div>`; }).join("")}
+      <div class="axis"><span></span><div class="ticks">${[0, 20, 40, 60, 80, 100].map(v => `<i style="left:${v}%">${v}</i>`).join("")}</div></div>
+      <div class="axtitle">Probability (%)</div>`;
+  } else {
+    const order = R.probs.map((p, i) => [p, i]).sort((a, b) => b[0] - a[0]);
+    $("#viz").innerHTML = `<div class="allc">${order.map(([p, i], k) => `<div class="arow ${k < 5 ? "hi" : ""}"><span>${k + 1}</span><span class="nm">${esc(nice(S.classes[i].name))}</span>
+      <div class="mini"><i style="width:${p * 100}%"></i></div><span class="pv">${pct(p)}%</span></div>`).join("")}</div>`;
+  }
+}
+
+/* 5 - history (kept in this browser; the CSV is made here) */
+function pushHistory(R) {
+  const r = R.rec, t = R.top5[0];
+  S.hist.unshift({time: stamp(new Date()), image: R.img.name, thumb: R.img.thumb, dataset: DATASET[r.dataset] || r.dataset, model: archName(r),
+    depth: r.depth, connection: connShort(r), checkpoint: `${r.id}/model.pt`, top1: nice(t.name), confidence: +pct(t.prob),
+    top5: R.top5.map(c => `${nice(c.name)} ${pct(c.prob)}%`).join("; ")});
+  S.hist = S.hist.slice(0, 200);
+  saveHist(); renderHist();
+}
+function renderHist() {
+  $("#hist tbody").innerHTML = S.hist.length ? S.hist.map((h, i) => `<tr><td>${i + 1}</td>
+    <td><div class="imgcell"><img class="thumb" src="${esc(h.thumb)}" alt=""><span title="${esc(h.image)}">${esc(h.image)}</span></div></td>
+    <td class="nw">${esc(h.dataset)}</td><td class="nw">${esc(h.model)}</td><td class="nw">${esc(h.connection)}</td><td class="ck">${esc(h.checkpoint)}</td>
+    <td><b>${esc(h.top1)}</b></td><td class="nw">${Number(h.confidence).toFixed(2)}%</td><td class="nw">${esc(h.time)}</td></tr>`).join("")
+    : `<tr><td class="none" colspan="9">No predictions yet. Every prediction is added here with its model, checkpoint and confidence.</td></tr>`;
+}
+$("#dl-hist").addEventListener("click", () => S.hist.length
+  ? saveCsv(`nn09_prediction_history_${stamp(new Date()).replace(/\D/g, "")}.csv`,
+      [["time", "image", "dataset", "model", "depth", "connection", "checkpoint", "top_prediction", "confidence_percent", "top5"],
+       ...S.hist.map(h => [h.time, h.image, h.dataset, h.model, h.depth, h.connection, h.checkpoint, h.top1, h.confidence, h.top5])])
+  : alert("The history is empty."));
+$("#clear-hist").addEventListener("click", () => { if (S.hist.length && confirm("Clear the prediction history?")) { S.hist = []; saveHist(); renderHist(); } });
+function saveCsv(name, rows) {
+  const q = v => /[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  const a = Object.assign(document.createElement("a"), {download: name,
+    href: URL.createObjectURL(new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n"], {type: "text/csv;charset=utf-8"}))});
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* 6 - class information */
+function showClass() {
+  const i = +$("#s-class").value, c = S.classes[i];
+  $("#cinfo").innerHTML = `<img src="/api/sample/${i}.png" alt=""><div><div><b>Class:</b> ${esc(nice(c.name))}</div><div><b>Index:</b> ${i}</div>
+    <div><b>Superclass:</b> ${esc(nice(c.super))}</div><p class="muted small" style="margin-top:4px">CIFAR-100 has 500 training and 100 test images of each class. The model can only answer with one of these ${S.classes.length} names.</p></div>`;
+}
+$("#s-class").addEventListener("change", showClass);
+
+/* 7 - how the loaded model was trained (metrics.csv of its run) */
+async function drawCurve() {
+  try { S.curve = await api(`/api/curve/${encodeURIComponent(S.rec.id)}`); renderCurve(); } catch { /* the chart is optional */ }
+}
+$("#tabs7").addEventListener("click", e => {
+  if (!e.target.dataset.t) return;
+  S.ptab = e.target.dataset.t;
+  document.querySelectorAll("#tabs7 button").forEach(b => b.classList.toggle("on", b.dataset.t === S.ptab));
+  renderCurve();
+});
+function renderCurve() {
+  const c = S.curve, acc = S.ptab === "acc", r = S.rec; if (!c) return;
+  const series = [{name: acc ? "Train accuracy" : "Train loss", color: "#2563eb", y: acc ? c.train_acc : c.train_loss},
+                  {name: acc ? "Test accuracy" : "Test loss", color: "#ef4444", y: acc ? c.test_acc : c.test_loss}];
+  const W = 400, H = 220, L = 40, R = 10, T = 10, B = 34, xs = c.epoch;
+  const ymax = acc ? 1 : Math.ceil(Math.max(...series.flatMap(s => s.y)) * 2) / 2;
+  const X = e => L + (e - xs[0]) / ((xs[xs.length - 1] - xs[0]) || 1) * (W - L - R), Y = v => T + (1 - v / ymax) * (H - T - B);
+  const grid = [0, .2, .4, .6, .8, 1].map(f => `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(f * ymax)}" y2="${Y(f * ymax)}"/>
+    <text class="tx" x="${L - 6}" y="${Y(f * ymax) + 4}" text-anchor="end">${acc ? Math.round(f * 100) : (f * ymax).toFixed(1)}</text>`).join("");
+  const step = xs.length > 12 ? 5 : 1, xt = xs.filter((e, k) => k === 0 || e % step === 0).map(e => `<text class="tx" x="${X(e)}" y="${H - B + 15}" text-anchor="middle">${e}</text>`).join("");
+  const lines = series.map(s => `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${s.y.map((v, k) => `${X(xs[k]).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}"/>`).join("");
+  $("#perf").innerHTML = `<svg class="plot" viewBox="0 0 ${W} ${H}" role="img" aria-label="${acc ? "Accuracy" : "Loss"} per epoch">${grid}${xt}${lines}
+    <text class="tx" x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">Epochs</text>${acc ? `<text class="tx" transform="translate(11 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">Accuracy (%)</text>` : ""}</svg>
+    <div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join("")}</div>`;
+  $("#perfnote").textContent = `${archName(r)}, ${connShort(r)}: test accuracy ${pct(r.acc)}% after ${r.epochs} epochs (one run, seed ${r.seed}).`;
+}
+
+/* views and start-up */
+function route() {
+  const v = location.hash === "#results" ? "results" : "predict";
+  $("#view-predict").hidden = v !== "predict"; $("#view-results").hidden = v !== "results";
+  document.querySelectorAll(".nav a[data-view]").forEach(a => a.classList.toggle("on", a.dataset.view === v));
+}
+window.addEventListener("hashchange", route);
+
+(async function start() {
+  route(); renderHist();
+  try {
+    const init = await api("/api/init");
+    S.runs = init.runs; S.classes = init.classes;
+    $("#nav-report").hidden = !init.report;
+    $("#figs").innerHTML = init.figures.length ? init.figures.map(f => `<figure><img loading="lazy" src="/files/figures/${encodeURIComponent(f)}" alt="${esc(f)}"><figcaption>${esc(nice(f.replace(/\.png$/, "")))}</figcaption></figure>`).join("")
+      : `<p class="muted">No figures found in results/figures.</p>`;
+    options($("#s-class"), S.classes.map((c, i) => [i, nice(c.name)])); showClass();
+    if (S.runs.length) refill(0);
+    else {
+      Object.values(sel).forEach(el => el.disabled = true);
+      $("#norun").hidden = false;
+      $("#norun").innerHTML = `<svg class="i"><use href="#i-info"/></svg><span>No trained models found in <b>${esc(init.runs_dir)}</b>. The demo models are trained once on Kaggle with the weights saved: see README_DEMO.md, "Get the demo weights".</span>`;
+    }
+  } catch (e) {
+    $("#res").innerHTML = `<div class="note err" style="margin-top:0"><svg class="i"><use href="#i-info"/></svg><span>Cannot reach the page's server (${esc(e.message)}). Start it with <b>python app/server.py</b> and open the address it prints.</span></div>`;
+  }
+})();
+</script>
+</body>
+</html>

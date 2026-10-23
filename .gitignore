@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.venv/
+# anchored: an unanchored "data/" also swallowed src/hcsmall/data/ and configs/data/
+/data/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+# resume checkpoints of a run in progress (created by the trainer)
+experiments/runs/
+# scratch output of the demo steps (README_DEMO.md steps 4 and 5); the stored tiny runs in results/smoke/raw are kept
+results/smoke/*
+!results/smoke/raw/
+# model weights are not committed, except the learned connection weights of the stored runs and the demo networks
+*.pt
+!results/raw/**/connections.pt
+!results/smoke/raw/**/connections.pt
+!results/demo/**/*.pt

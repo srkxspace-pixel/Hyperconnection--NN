@@ -1,0 +1,2 @@
+vittiny24_dhc_n4_cifar100p10_s0 epoch 1/2 train 4.617/0.016 test 4.503/0.028 lr 0.0010 7s
+vittiny24_dhc_n4_cifar100p10_s0 epoch 2/2 train 4.577/0.016 test 4.466/0.030 lr 0.0000 6s

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hcsmall"
+version = "0.1.0"
+description = "NN-09: Hyper-Connections at small scale (residual vs HC vs mHC in compact CNNs and ViTs)"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore:The argument 'device' of Tensor.*:DeprecationWarning"]   # torch-internal pin_memory noise

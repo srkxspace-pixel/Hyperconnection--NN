@@ -1,0 +1,15 @@
+# Shared by every ResNet depth. Recipe = D7 (approved 2026-10-07), identical for all connections.
+model:
+  family: resnet
+  name: resnet
+train:
+  optimizer: sgd
+  lr: 0.1
+  momentum: 0.9
+  nesterov: true
+  weight_decay: 5.0e-4
+  schedule: cosine        # per step, to 0
+  warmup_epochs: 0
+  label_smoothing: 0.0
+  augment: {crop_padding: 4, flip: true, randaugment: null}
+  decay_norm_and_bias: true   # standard CIFAR-ResNet practice: weight decay on every parameter except the HC ones (D9/D17)

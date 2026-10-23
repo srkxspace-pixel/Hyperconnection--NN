@@ -1,0 +1,14 @@
+\begin{tabular}{lll}
+\toprule
+Setting & ResNet & ViT-Tiny \\
+\midrule
+Optimizer & SGD, momentum 0.9, Nesterov & AdamW \\
+Learning rate & 0.1 & 0.001 \\
+Weight decay & 0.0005 & 0.05 \\
+Schedule & cosine, warmup 0 ep. & cosine, warmup 10 ep. \\
+Label smoothing & 0.0 & 0.1 \\
+Augmentation & crop (pad 4), flip & crop (pad 4), flip, RandAugment (2 ops, mag. 9) \\
+Batch size & 128 & 128 \\
+Epochs (this study) & 30 & 30 \\
+\bottomrule
+\end{tabular}

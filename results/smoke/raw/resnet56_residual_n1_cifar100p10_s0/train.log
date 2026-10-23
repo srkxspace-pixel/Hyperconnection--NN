@@ -1,0 +1,2 @@
+resnet56_residual_n1_cifar100p10_s0 epoch 1/2 train 4.624/0.013 test 4.798/0.011 lr 0.1000 2s
+resnet56_residual_n1_cifar100p10_s0 epoch 2/2 train 4.558/0.013 test 4.570/0.017 lr 0.0024 1s

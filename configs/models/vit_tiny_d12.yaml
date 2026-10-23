@@ -1,0 +1,2 @@
+defaults: [models/_vit]
+model: {depth: 12}

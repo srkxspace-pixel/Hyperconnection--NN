@@ -1,0 +1,14 @@
+# Pinned 2026-10-06 (Python 3.11). PyTorch is the CUDA 12.6 build: the extra index makes pip prefer 2.9.1+cu126 over
+# the CPU-only 2.9.1 on PyPI. On Colab (ships its own torch) the notebook skips the torch lines; on a CPU-only machine
+# drop the --extra-index-url line and the two torch lines.
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.9.1
+torchvision==0.24.1
+numpy==2.4.6
+pandas==3.0.6
+scipy==1.17.1
+matplotlib==3.11.2
+PyYAML==6.0.3
+fvcore==0.1.5.post20221221
+pytest==9.1.1
+-e .

@@ -1,0 +1,4 @@
+model,residual_mean,residual_std,residual_n,residual_p,residual_sig,dhc_n2_mean,dhc_n2_std,dhc_n2_n,dhc_n2_p,dhc_n2_sig,dhc_n4_mean,dhc_n4_std,dhc_n4_n,dhc_n4_p,dhc_n4_sig,mhc_n4_mean,mhc_n4_std,mhc_n4_n,mhc_n4_p,mhc_n4_sig
+resnet20,37.89,,1,,False,37.11,,1,,False,36.75,,1,,False,38.22,,1,,False
+resnet56,41.03,,1,,False,40.699999999999996,,1,,False,41.29,,1,,False,41.46,,1,,False
+vit_tiny_d6,32.96,,1,,False,32.21,,1,,False,31.97,,1,,False,31.75,,1,,False

@@ -1,0 +1,2 @@
+# mean / std are measured on the 50,000 training images (scripts/prepare_data.py)
+data: {name: cifar100, num_classes: 100, img_size: 32, patch_size: 4, percent: 25, subset_seed: 0, mean: null, std: null}

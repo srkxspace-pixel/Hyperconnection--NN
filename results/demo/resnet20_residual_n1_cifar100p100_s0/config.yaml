@@ -1,0 +1,56 @@
+seed: 0
+seeds:
+- 0
+- 1
+- 2
+paths:
+  data_dir: /kaggle/working/nn09/data
+  subsets_dir: configs/data/subsets
+  results_dir: /kaggle/working/nn09/demo_e30/raw
+  runs_dir: /kaggle/working/nn09/demo_e30/runs
+train:
+  batch_size: 128
+  num_workers: 2
+  epochs: 30
+  epoch_steps: 390
+  checkpoint_every: 1
+  stop_at: 1792675011
+  save_weights: true
+  optimizer: sgd
+  lr: 0.1
+  momentum: 0.9
+  nesterov: true
+  weight_decay: 0.0005
+  schedule: cosine
+  warmup_epochs: 0
+  label_smoothing: 0.0
+  augment:
+    crop_padding: 4
+    flip: true
+    randaugment: null
+  decay_norm_and_bias: true
+analysis:
+  probe_images: 1000
+  grad_batches: 20
+  checkpoints:
+  - 0.25
+  - 0.5
+  - 1.0
+  seed: 0
+model:
+  family: resnet
+  name: resnet
+  depth: 20
+connection:
+  kind: residual
+  n: 1
+data:
+  name: cifar100
+  num_classes: 100
+  img_size: 32
+  patch_size: 4
+  percent: 100
+  subset_seed: 0
+  mean: null
+  std: null
+root: /tmp/nn09_work/nn09_code

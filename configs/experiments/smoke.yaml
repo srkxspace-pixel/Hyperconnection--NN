@@ -1,0 +1,12 @@
+# Quick end-to-end check: 2 "epochs" of 10 optimizer steps on the 10% subset.
+# `train.py --config` runs the `defaults` below; `run_matrix.py --tier smoke` runs every model x connection in `grid`.
+# Outputs go to results/smoke so they never mix with the study's results/raw.
+# The recipe's batch size (128) is kept; on a GPU with <= 4 GiB add --set train.batch_size=32 (ViT-24 with 4 streams).
+defaults: [models/resnet20, connections/dhc_n2, data/cifar100_p10]
+paths: {results_dir: results/smoke}
+train: {epochs: 2, epoch_steps: 10, warmup_epochs: 1}
+grid:
+  models: [resnet20, resnet56, resnet110, vit_tiny_d6, vit_tiny_d12, vit_tiny_d24]
+  connections: [residual, dhc_n2, dhc_n4, mhc_n4]
+  data: [cifar100_p10]
+  seeds: [0]

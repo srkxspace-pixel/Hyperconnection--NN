@@ -1,0 +1,18 @@
+# Shared by every ViT-Tiny depth. Architecture = D5, recipe = D8 (both approved 2026-10-07), identical for all connections.
+# patch size and image size come from the data config (D5: patch 4 on CIFAR, patch 8 on Tiny-ImageNet).
+model:
+  family: vit
+  name: vittiny
+  dim: 192
+  heads: 3
+  mlp_ratio: 4
+train:
+  optimizer: adamw
+  lr: 1.0e-3
+  weight_decay: 0.05
+  schedule: cosine        # per step, to 0, after the warmup
+  warmup_epochs: 10
+  label_smoothing: 0.1
+  # D8 names RandAugment without parameters: torchvision defaults (2 ops, magnitude 9). No mixup / cutmix.
+  augment: {crop_padding: 4, flip: true, randaugment: {num_ops: 2, magnitude: 9}}
+  decay_norm_and_bias: false  # standard ViT practice: no weight decay on biases, LayerNorm, position / class tokens

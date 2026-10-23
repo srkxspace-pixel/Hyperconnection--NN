@@ -1,0 +1,130 @@
+# Student guide: presenting and defending this project
+
+This guide is for the student who will present the project. It tells you what the project is, where everything is, how to give a short live demonstration, what questions to expect, and what to say about the limits. All numbers come from the stored results (`results/`), and the full write-up is in `docs/PROJECT_REPORT.md` (a Word copy, `docs/PROJECT_REPORT.docx`, is for submission).
+
+## 1. The project in one minute
+
+Deep networks pass information along a *shortcut* (residual connection) so that very deep networks can be trained. A recent idea, *hyper-connections* (HC), replaces the single shortcut by *n* parallel lanes with learned weights; *mHC* adds a constraint on how the lanes mix to keep training stable. It had only been tested on very large models. This project tests it on **small** image networks and **small** data.
+
+We implemented HC and mHC for convolutional networks (ResNet-20, ResNet-56) and for a small vision transformer (ViT-Tiny, 6 blocks), proved with tests that each starts out computing exactly what the ordinary network computes, and trained [[n_runs]] networks on CIFAR-100: four connection types x three models x two data sizes (all data and 10%).
+
+**Main findings** (one run per setting, so these are observations, not proven effects):
+
+- With all the data, HC with 2 or 4 lanes improved both ResNets ([[agg.resnet_hc.p100.lo]] to [[agg.resnet_hc.p100.hi]] points), and every connection type, mHC included, lowered the accuracy of the ViT (by [[agg.vit_all.p100.abslo]] to [[agg.vit_all.p100.abshi]] points).
+- With 10% of the data there was no consistent gain.
+- HC costs [[range.hoursx.hc.lo]] to [[range.hoursx.hc.hi]] times the training time; mHC costs [[range.hoursx.mhc_n4.lo]] to [[range.hoursx.mhc_n4.hi]] times and gave the smallest gains.
+- In the ResNets, HC with 4 lanes made consecutive layers change the representation more; mHC did not; in the ViT the differences were small.
+
+## 2. What is in the folder
+
+| Where | What |
+|---|---|
+| `docs/PROJECT_REPORT.md` / `.docx` | The final report (generated from the data; the `.docx` is the one to submit) |
+| `docs/STUDENT_GUIDE.md` | This guide |
+| `README_DEMO.md` | Step-by-step commands for the live demonstration (with a quick start for anyone who cloned the repository) |
+| `docs/experiment_log.md` | What was run, when, on what, and what went wrong |
+| `docs/method_notes.md` | The equations as implemented, and every design decision (section 12) |
+| `results/raw/` | The raw logs of all [[n_runs]] runs (per-epoch accuracy, gradients, similarity, learned weights) |
+| `results/tables/` and `results/figures/` | Every table and figure, rebuilt from `results/raw/` |
+| `results/demo/` | The four ResNet-20 networks of the live prediction page, with their saved weights |
+| `results/smoke/raw/` | The stored two-epoch pipeline check: one tiny run for every model x connection pair (not study results) |
+| `app/` | The live prediction page: `python app/server.py` |
+| `src/hcsmall/connections/` | The heart of the project: normal shortcut, HC and mHC (for images and for tokens) |
+| `src/hcsmall/models/` | ResNet and ViT-Tiny with a pluggable connection |
+| `src/hcsmall/training/`, `data/`, `analysis/` | Training loop, data and subsets, tables/figures |
+| `scripts/` | Command-line tools: `train.py`, `run_matrix.py`, `aggregate.py`, `make_figures.py`, `build_report.py` |
+| `tests/` | The test-suite (including "HC equals the normal network at the start") |
+| `notebooks/nn09_colab.ipynb` | The notebook that runs the whole study on a free GPU (Kaggle or Colab) |
+| `notebooks/nn09_demo_weights.ipynb` | The same notebook with the plan preset to re-create the four networks of the live page |
+| `notebooks/executed/` | The executed notebooks of the runs that were actually done |
+
+## 3. A 10-minute live demonstration
+
+You do not need a GPU for steps 1-3, but you need Python 3.10 or newer and an internet connection once. Do the set-up **a day before**, not on the day:
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs the library versions the code was developed with (a large download, because it includes PyTorch). The study itself ran on Kaggle's own, newer PyTorch (2.11) and the same code passed its tests there, so exact versions do not matter. On a laptop without a GPU a lighter alternative is: `pip install torch torchvision numpy pandas scipy matplotlib pyyaml fvcore pytest` followed by `pip install -e . --no-deps`. Then run the tiny training of step 3 once, so that CIFAR-100 (169 MB) is already downloaded and you know how long things take on your machine.
+
+1. **(2 min) The result.** Open `results/figures/F1_accuracy_vs_depth.png` and `F2_gain_vs_data_fraction.png`, and the accuracy table in the report. Say: "Same layers, same recipe, only the shortcut differs. With all the data, HC with two lanes gave +[[absgain.resnet20.dhc_n2.p100]] points on ResNet-20 and +[[absgain.resnet56.dhc_n2.p100]] on ResNet-56; for the ViT it was worse. With 10% of the data, no gain. One run per setting, so we call these observations."
+2. **(3 min) The guarantee.** Run `pytest tests/test_equivalence_init.py -q -k test_equals_residual_at_init` in a terminal. This is the quick part of the check (the connection layers on their own); the whole file, `pytest tests/test_equivalence_init.py -q`, also checks every complete network and takes longer (the entire test-suite of 148 tests took 39 seconds on the Kaggle machine; a laptop CPU needs more, so time it beforehand). No GPU or internet is needed. Say: "Before training, an HC or mHC layer gives the same output as the ordinary shortcut, up to rounding error, and the full test shows the same for every complete network. So any difference after training was learned, not built in."
+3. **(3 min) A tiny training run.** Run `python scripts/train.py --config configs/experiments/smoke.yaml`. It trains ResNet-20 with 2-lane HC for two "epochs" of 10 steps on the 10% subset, and writes a run folder under `results/smoke/` (git ignores it; the stored tiny runs of the earlier Colab check are in `results/smoke/raw/`) that has the same files as the ones in `results/raw/` (`metrics.csv`, `final.json`, `grad_norms.csv`, `similarity.csv`, `connections.pt`, `config.yaml`, `train.log`). Show the folder and open `final.json`. Say: "This is exactly what ran 24 times on Kaggle, only longer."
+4. **(2 min) What happened inside.** Show `F3_representation_collapse.png` (layers change the representation more with HC in the ResNet) and `F6_connection_patterns.png` (the learned lane weights). Say: "In the ResNet, HC makes consecutive layers less alike (lower CKA). mHC did not; it starts as, and stays close to, the normal shortcut. In the lane-mixing matrices the diagonal dominates: each lane mostly keeps its own content."
+
+5. **(optional, 3 min) The live prediction page.** Run `python app/server.py`; it needs only `torch`, `torchvision` and `pyyaml`, and the four trained networks are in `results/demo/`. The page opens in the browser: choose a connection type, press *Load Model*, drop in a picture, and show the top-5 answers and the bar chart. Load another connection type and the same picture is predicted again, so the networks can be compared; every prediction is added to the history, which can be downloaded as CSV together with the model, connection and checkpoint. Use pictures of the 100 CIFAR-100 classes (panel 6 lists them): the networks know no dog or cat. Say: "These are the same kind of networks, trained once more with their weights saved so that they can be shown at work. The page shows each network's own test accuracy from its training log." The step-by-step commands are in `README_DEMO.md`, step 8.
+
+If a live step fails, do not debug in front of the audience: show the stored results and say that the whole pipeline is reproducible from `results/raw/` with `python scripts/aggregate.py && python scripts/make_figures.py`.
+
+**Suggested slides (8):** (1) title and the question; (2) the idea: one shortcut lane against n lanes (draw it); (3) what we built, and the "equal at the start" guarantee; (4) setup: models, connections, data, 30 epochs, one run each; (5) the accuracy table with `F1_accuracy_vs_depth` and `F2_gain_vs_data_fraction`; (6) what happened inside: `F3_representation_collapse`, `F4_gradient_norms`, `F6_connection_patterns`; (7) cost: the cost table with `F5_accuracy_vs_cost`; (8) limits and next steps. The figure numbers inside the report differ from the file names; each caption in the report names its file.
+
+## 4. Questions you may be asked
+
+**What problem does the project address?** Whether replacing the single shortcut of a network by several learned lanes (hyper-connections) helps *small* image networks trained on *small* data, and what it costs. It had only been tested on very large models.
+
+**What is a residual connection?** A layer computes `x + F(x)` instead of `F(x)`: the input is added to the output, so the signal and the gradient can skip the layer. It is what makes networks with dozens or hundreds of layers trainable.
+
+**What is a hyper-connection?** The network keeps *n* copies of the signal (lanes). Each layer reads a learned mixture of the lanes, writes its output back into every lane with its own weight, and mixes the old lanes with a learned matrix. "Dynamic" HC computes some of these weights from the data.
+
+**What is mHC?** It forces the lane-mixing matrix to be *doubly stochastic* (all entries non-negative, every row and column adding to 1) using the Sinkhorn-Knopp procedure, which keeps the signal from blowing up or fading across many layers.
+
+**What does "equal at initialisation" mean and why does it matter?** At the start of training, the HC network computes exactly the same function as the ordinary network (tested to numerical precision). So both start from the same point, and differences afterwards are due to learning. It also makes the comparison fair.
+
+**What is new in your work?** To our knowledge, nobody had tested HC or mHC in convolutional networks, on small data, or across depth. We built a version for convolutional networks (weights computed from the average of each lane's feature map), proved the equal-at-the-start property, and compared on CIFAR-100 with a reproducible pipeline. (We say "to our knowledge": the original paper already tested vision transformers on ImageNet, and a public implementation has a different convolutional version.)
+
+**How did you keep the comparison fair?** For one model, the only thing that changes between connection types is the connection: same layers, same random starting weights, same data order, same training recipe, nothing tuned for HC. The 10% runs got the same number of training steps as the full-data runs.
+
+**Why only 30 epochs, three models and one run each?** The study ran on free GPUs (Kaggle, about 30 GPU-hours a week) and had to fit; the full plan with 144 runs would have needed hundreds of GPU-hours. All [[n_runs]] runs took about 6 hours on two GPUs. This is stated as a limit.
+
+**Are the results statistically significant?** We cannot say. With one run per setting we have no estimate of how much accuracy varies between repeats, so no significance test is possible. Gaps of 1-2 points could partly be luck. Repeating with more seeds is the first thing to do next.
+
+**What are the main findings?** See section 1. In short: HC with 2 lanes helped small ResNets with all the data, did not help the ViT or the 10% runs, and cost [[range.hoursx.hc.lo]] to [[range.hoursx.hc.hi]] times the training time; mHC cost more and helped least.
+
+**Why did HC help the ResNets but not the ViT?** We did not test it. Possible reasons, stated as hypotheses: the ViT recipe was written for 200 epochs (its [[vit_warmup]]-epoch warm-up is a third of our budget) and its accuracy was still rising at the end; and HC starts as an identity-like network so it may need longer training to pay off.
+
+**Why no gain with 10% of the data?** Also untested. With the same number of training steps, the 10% networks see each image many times, and the extra freedom of HC may simply overfit. The ResNet gains seen with all the data vanish there.
+
+**What is CKA?** A number between 0 and 1 that says how similar two sets of activations are (1 = the same). We compare each layer's input and output: a lower value means the layer changes the representation more, which is what HC was designed to encourage.
+
+**What does HC cost?** More memory (about [[range.mem.hc.lo]] to [[range.mem.hc.hi]] times) and more time per step, because there are several copies of the feature maps and extra small computations. It adds under [[range.paramsup.dhc_n4.hi]]% parameters. mHC adds about [[range.paramsup.mhc_n4.lo]] to [[range.paramsup.mhc_n4.hi]]% parameters and is the slowest. Our implementation does not use fused GPU kernels, so these are the costs of this implementation.
+
+**How do you know the code is correct?** (1) A test-suite of 148 core tests plus 29 newer checks passed on the GPU machine used for the study, including the equal-at-the-start tests for every model and connection. (2) The mHC mixing matrix is tested to be doubly stochastic. (3) Every table and figure is rebuilt from the stored raw logs, and two independent builds (Kaggle and a laptop) gave identical tables.
+
+**What went wrong during the project and what did you do?** See `docs/experiment_log.md`: a first run attempt stopped because Kaggle's environment contains a Colab library that made the notebook mistake Kaggle for Colab (fixed); opening the notebook in two browser tabs made Kaggle reject a save (one tab only); the first Kaggle account could not use the GPU because the phone number was already tied to another account (used the verified account); and downloading CIFAR-100 on Kaggle took about an hour (now cached). Saying this openly shows you understand the process.
+
+**What would you do next?** More seeds (error bars and tests); ResNet-110 and deeper ViTs for the depth question; longer ViT training; per-pixel weights for the convolutional version; fused kernels to measure the best-case cost; Tiny-ImageNet.
+
+**What does the live page show, and how was it made?** The page loads one of four trained ResNet-20 networks (the normal shortcut, HC with 2 lanes, HC with 4 lanes, mHC with 4 lanes), cuts the middle square out of your picture, shrinks it to 32 x 32 pixels like the training pictures, and prints the five classes with the highest scores as a list and a bar chart. It can download the answer and the whole prediction history as CSV files. The study's own runs saved only their logs, not the trained networks, so these four were trained once more on Kaggle with the same recipe and seed, with the weights saved (`notebooks/nn09_demo_weights.ipynb`). A new run does not give bit-identical numbers, so the accuracy the page shows for each network (taken from its training log) differs slightly from the report's table; the report uses only the runs in `results/raw/`. After training, each saved network was reloaded and classified all the test pictures through the code the page uses, and gave exactly the accuracy logged at the end of its training.
+
+**Why does the page get my photo wrong, and why is there no dog?** The networks know only the 100 classes of CIFAR-100, and dogs and cats are not among them (those two are in CIFAR-10). They are small networks trained on tiny 32 x 32 pictures: right for most test pictures but not all, and a photo whose subject is small or whose background looks unlike CIFAR is often misclassified. That is a limit of small networks on a small dataset, not a bug in the page.
+
+## 5. What to say about the limits
+
+- One run per setting: observations, not proven effects.
+- 30 epochs: short, especially for the ViT.
+- Three models and one dataset (CIFAR-100); only one ViT depth, so the depth question is open for transformers.
+- One training recipe per model family; nothing was tuned for HC.
+- Our own start values for mHC; the mHC results depend on them.
+- Timing uses plain PyTorch without fused kernels.
+
+Do not claim more than the data shows: say "in our runs" and "we observed", never "HC always improves" or "HC does not work".
+
+## 6. Running things yourself
+
+- **Laptop, no GPU:** tests, rebuilding tables and figures (`python scripts/aggregate.py`, `python scripts/make_figures.py`), a tiny training run, and `python scripts/build_report.py` (rebuilds the report from the data).
+- **The full study:** `notebooks/nn09_colab.ipynb` on Kaggle (account with a verified phone number; Session options: GPU T4 x2, Internet on; *Save Version*, then *Save & Run All (Commit)*) or on Colab. It takes about 6 hours for the 24 runs. Open the notebook in one browser tab only.
+- **More seeds:** in the notebook set `SEEDS = "0,1,2"`, add the previous output as input so that finished runs are skipped, and run again (about 6 hours per extra seed).
+- **The live page:** `python app/server.py` (a Python environment with `torch`, `torchvision` and `pyyaml`; see `README_DEMO.md`, "Quick start"). To re-create its four networks, run `notebooks/nn09_demo_weights.ipynb` on Kaggle (about an hour and a half; `README_DEMO.md`, "Get the demo weights").
+
+## 7. Glossary
+
+- **Shortcut / residual connection:** adds a layer's input to its output.
+- **Lane (stream):** one of the *n* parallel copies of the signal in HC.
+- **HC / DHC:** hyper-connections / the dynamic version, where the weights depend on the data.
+- **mHC:** HC with a doubly stochastic lane-mixing matrix.
+- **Epoch:** one pass over the training data (here a fixed number of steps; see the report).
+- **Seed:** the number that fixes the random choices of a run. A repeat with another seed shows how much results vary by luck.
+- **CKA:** similarity score between two sets of activations (1 = identical).
+- **Top-1 accuracy:** the share of test images whose highest-scored class is the right one.
+- **Checkpoint / weights file:** the file in which a trained network's learned numbers are saved (`model.pt`); the live page loads four of them.

@@ -1,0 +1,21 @@
+# Shared defaults, merged first: base <- model <- connection <- data <- experiment.
+seed: 0
+seeds: [0, 1, 2]          # the original plan's three seeds
+paths:                    # relative to the repo root
+  data_dir: data          # git-ignored
+  subsets_dir: configs/data/subsets   # saved subset / probe indices, committed
+  results_dir: results/raw
+  runs_dir: experiments/runs   # git-ignored: resume checkpoints
+train:
+  batch_size: 128         # D7 / D8
+  num_workers: auto       # DataLoader workers for the CPU augmentation: 0 on Windows, up to 4 elsewhere; or an integer
+  epochs: 200             # D7 / D8: the recipes' own length; the compact study (D19) overrides it with train.epochs=30
+  epoch_steps: null       # optimizer steps per "epoch"; null = one pass over the training set; D6 "same steps": the study sets 390 for every data fraction
+  checkpoint_every: 1     # write the resume checkpoint every N epochs (raise it when the checkpoint folder is slow, e.g. Drive)
+  stop_at: null           # unix time (seconds): pause after the epoch that would not end before it (session limit); set by run_matrix
+  save_weights: false     # true = also write <run folder>/model.pt (final weights + config) for the demo page (D20); the study runs leave it off
+analysis:
+  probe_images: 1000      # fixed class-balanced probe set (test split) for similarity / CKA
+  grad_batches: 20        # fixed batches of unaugmented training images for the gradient-norm analysis
+  checkpoints: [0.25, 0.5, 1.0]   # fractions of training, plus the end of epoch 1
+  seed: 0

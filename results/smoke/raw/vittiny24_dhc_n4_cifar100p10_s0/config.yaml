@@ -1,0 +1,57 @@
+seed: 0
+seeds:
+- 0
+- 1
+- 2
+paths:
+  data_dir: /content/data
+  subsets_dir: configs/data/subsets
+  results_dir: /content/drive/MyDrive/nn09/smoke/raw
+  runs_dir: /content/drive/MyDrive/nn09/smoke/runs
+train:
+  batch_size: 128
+  num_workers: auto
+  epochs: 2
+  epoch_steps: 10
+  checkpoint_every: 1
+  optimizer: adamw
+  lr: 0.001
+  weight_decay: 0.05
+  schedule: cosine
+  warmup_epochs: 1
+  label_smoothing: 0.1
+  augment:
+    crop_padding: 4
+    flip: true
+    randaugment:
+      num_ops: 2
+      magnitude: 9
+  decay_norm_and_bias: false
+analysis:
+  probe_images: 1000
+  grad_batches: 20
+  checkpoints:
+  - 0.25
+  - 0.5
+  - 1.0
+  seed: 0
+model:
+  family: vit
+  name: vittiny
+  dim: 192
+  heads: 3
+  mlp_ratio: 4
+  depth: 24
+connection:
+  kind: dhc
+  n: 4
+data:
+  name: cifar100
+  num_classes: 100
+  img_size: 32
+  patch_size: 4
+  percent: 10
+  subset_seed: 0
+  mean: null
+  std: null
+root: /content/nn09_code

@@ -1,0 +1,18 @@
+\begin{tabular}{llrrrrrrrr}
+\toprule
+Model & Connection & Params (M) & GMACs & Mem (MiB) & $\times$ mem & Train img/s & $\times$ time & Infer img/s & $\times$ time \\
+\midrule
+ResNet-20 & Residual & 0.278 & 0.041 & 215 & 1.00 & 4764 & 1.00 & 19371 & 1.00 \\
+ResNet-20 & DHC$\times$2 & 0.279 & 0.042 & 360 & 1.67 & 2675 & 1.78 & 8397 & 2.31 \\
+ResNet-20 & DHC$\times$4 & 0.280 & 0.043 & 462 & 2.15 & 2100 & 2.27 & 6872 & 2.82 \\
+ResNet-20 & mHC$\times$4 & 0.306 & 0.043 & 466 & 2.17 & 1596 & 2.98 & 6568 & 2.95 \\
+ResNet-56 & Residual & 0.861 & 0.126 & 557 & 1.00 & 1637 & 1.00 & 6711 & 1.00 \\
+ResNet-56 & DHC$\times$2 & 0.866 & 0.128 & 954 & 1.71 & 950 & 1.72 & 2967 & 2.26 \\
+ResNet-56 & DHC$\times$4 & 0.868 & 0.132 & 1228 & 2.20 & 761 & 2.15 & 2491 & 2.69 \\
+ResNet-56 & mHC$\times$4 & 0.954 & 0.132 & 1240 & 2.23 & 519 & 3.15 & 2441 & 2.75 \\
+ViT-Tiny-6 & Residual & 2.711 & 0.183 & 680 & 1.00 & 1662 & 1.00 & 4994 & 1.00 \\
+ViT-Tiny-6 & DHC$\times$2 & 2.720 & 0.184 & 1054 & 1.55 & 989 & 1.68 & 3217 & 1.55 \\
+ViT-Tiny-6 & DHC$\times$4 & 2.725 & 0.188 & 1382 & 2.03 & 774 & 2.15 & 2441 & 2.05 \\
+ViT-Tiny-6 & mHC$\times$4 & 2.932 & 0.200 & 1689 & 2.48 & 688 & 2.42 & 2379 & 2.10 \\
+\bottomrule
+\end{tabular}

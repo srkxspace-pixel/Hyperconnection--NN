@@ -1,0 +1,19 @@
+{
+  "best_acc": 0.0215,
+  "device": "Tesla T4",
+  "diverged": false,
+  "epochs": 2,
+  "epochs_done": 2,
+  "final_acc": 0.0215,
+  "final_test_loss": 4.549424052429199,
+  "git_commit": "db0a1dfdba0bc8b6dbae5654f989608e2798908c",
+  "n_train": 5000,
+  "params": 279374,
+  "peak_mem_mb": 362.35107421875,
+  "run_id": "resnet20_dhc_n2_cifar100p10_s0",
+  "seed": 0,
+  "torch": "2.11.0+cu130",
+  "total_steps": 20,
+  "train_img_per_s": 943.7260954227507,
+  "train_seconds": 2.712651491165161
+}

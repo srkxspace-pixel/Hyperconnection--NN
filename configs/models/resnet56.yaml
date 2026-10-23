@@ -1,0 +1,2 @@
+defaults: [models/_resnet]
+model: {depth: 56}

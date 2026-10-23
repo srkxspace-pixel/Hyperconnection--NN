@@ -1,0 +1,19 @@
+{
+  "best_acc": 0.0301,
+  "device": "Tesla T4",
+  "diverged": false,
+  "epochs": 2,
+  "epochs_done": 2,
+  "final_acc": 0.0301,
+  "final_test_loss": 4.454001826477051,
+  "git_commit": "db0a1dfdba0bc8b6dbae5654f989608e2798908c",
+  "n_train": 5000,
+  "params": 2725084,
+  "peak_mem_mb": 1382.10205078125,
+  "run_id": "vittiny6_dhc_n4_cifar100p10_s0",
+  "seed": 0,
+  "torch": "2.11.0+cu130",
+  "total_steps": 20,
+  "train_img_per_s": 619.3541075271521,
+  "train_seconds": 4.133338212966919
+}

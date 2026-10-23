@@ -1,0 +1,10 @@
+# Tier 1: 6 models x 4 connections x 2 data settings x 3 seeds = 144 runs, the original plan.
+# The compact study that was run (D19) is a sub-grid of it: the notebook plan `pilot` = ResNet-20, ResNet-56 and ViT-Tiny-6, seed 0,
+#   python scripts/run_matrix.py --tier 1 --models resnet20 resnet56 vit_tiny_d6 --seeds 0 --set train.epochs=30 --set train.epoch_steps=390
+# (the recipes' own length is 200 epochs, which needs hundreds of GPU-hours for the whole matrix).
+grid:
+  models: [resnet20, resnet56, resnet110, vit_tiny_d6, vit_tiny_d12, vit_tiny_d24]
+  connections: [residual, dhc_n2, dhc_n4, mhc_n4]
+  data: [cifar100_p100, cifar100_p10]
+  seeds: [0, 1, 2]
+train: {}

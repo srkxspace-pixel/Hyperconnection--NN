@@ -1,0 +1,2 @@
+resnet56_mhc_n4_cifar100p10_s0 epoch 1/2 train 4.623/0.016 test 4.890/0.013 lr 0.1000 4s
+resnet56_mhc_n4_cifar100p10_s0 epoch 2/2 train 4.559/0.014 test 4.648/0.017 lr 0.0024 3s
